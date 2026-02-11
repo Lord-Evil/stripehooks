@@ -4,6 +4,28 @@
 <h1 style="margin-bottom: 1.5rem;">Dashboard</h1>
 
 <div class="card">
+    <h2>Overview</h2>
+    <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+        <div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.25rem;">Total Transactions</p>
+            <p style="font-size: 1.5rem; font-weight: 600;">{{ total_transactions }}</p>
+            {% if total_by_currency %}
+            <p style="font-size: 0.9rem; color: var(--text-muted);">
+                {% for currency, total in total_by_currency %}
+                {{ "%.2f"|format(total / 100) }} {{ (currency or 'usd')|upper }}{% if not loop.last %} · {% endif %}
+                {% endfor %}
+            </p>
+            {% endif %}
+        </div>
+        <div>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.25rem;">Product Rules</p>
+            <p style="font-size: 1.5rem; font-weight: 600;">{{ rules_enabled }} / {{ rules_total }}</p>
+            <p style="font-size: 0.9rem; color: var(--text-muted);">enabled / configured</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
     <h2>Configuration Status</h2>
     <table>
         <tr>
