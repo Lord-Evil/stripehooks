@@ -72,6 +72,12 @@ async def _ensure_admin_password() -> None:
     await set_setting("admin_password_hash", _hash_password(ADMIN_PASSWORD, salt))
 
 
+async def _get_base_url() -> str:
+    """Return BASE_URL from settings (DB) or env default."""
+    override = await get_setting("base_url")
+    return (override or BASE_URL).rstrip("/")
+
+
 async def _get_nav_context() -> dict:
     """Context for nav (stripe/webhook configured)."""
     stripe_configured = await get_setting("stripe_api_key") is not None
@@ -147,7 +153,7 @@ async def admin_dashboard(request: Request):
             **nav,
             "smtp_configured": smtp_configured,
             "telegram_configured": telegram_configured,
-            "base_url": BASE_URL,
+            "base_url": await _get_base_url(),
             **stats,
         },
     )
@@ -163,7 +169,7 @@ async def admin_stripe(request: Request):
         "stripe_config.html",
         {
             "request": request,
-            "base_url": BASE_URL,
+            "base_url": await _get_base_url(),
             **nav,
         },
     )
@@ -205,7 +211,7 @@ async def create_webhook(request: Request):
             status_code=302,
         )
 
-    webhook_url = f"{BASE_URL.rstrip('/')}/webhook/stripe"
+    webhook_url = f"{await _get_base_url()}/webhook/stripe"
 
     try:
         # List existing webhooks for this URL (pass api_key explicitly to avoid global state)
@@ -607,9 +613,10 @@ async def admin_account(request: Request):
         return RedirectResponse(url="/admin/login", status_code=302)
 
     nav = await _get_nav_context()
+    base_url = await get_setting("base_url") or ""
     return templates.TemplateResponse(
         "account.html",
-        {"request": request, **nav},
+        {"request": request, "base_url": base_url, **nav},
     )
 
 
@@ -639,6 +646,22 @@ async def change_password(
     salt = await get_setting("admin_password_salt") or SESSION_SECRET
     await set_setting("admin_password_hash", _hash_password(new_password, salt))
 
+    return RedirectResponse(url="/admin/account?success=1", status_code=302)
+
+
+@app.post("/admin/account/baseurl")
+async def save_baseurl(request: Request, base_url: str = Form("")):
+    if not verify_admin(request):
+        raise HTTPException(status_code=401)
+
+    url = base_url.strip().rstrip("/")
+    if url and not (url.startswith("http://") or url.startswith("https://")):
+        return RedirectResponse(
+            url="/admin/account?error=" + _url_quote("URL+must+start+with+http://+or+https://"),
+            status_code=302,
+        )
+
+    await set_setting("base_url", url)
     return RedirectResponse(url="/admin/account?success=1", status_code=302)
 
 
