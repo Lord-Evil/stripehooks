@@ -171,6 +171,40 @@ async def insert_payment_history(
         await db.commit()
 
 
+async def get_dashboard_stats() -> dict:
+    """Return stats for dashboard: total_transactions, total_by_currency, rules_total, rules_enabled."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        # Transaction stats
+        async with db.execute(
+            "SELECT COUNT(*) as cnt FROM payment_history"
+        ) as cur:
+            row = await cur.fetchone()
+            total_transactions = row["cnt"] if row else 0
+        async with db.execute(
+            "SELECT currency, SUM(amount) as total FROM payment_history GROUP BY currency"
+        ) as cur:
+            rows = await cur.fetchall()
+            total_by_currency = [(r["currency"] or "usd", r["total"] or 0) for r in rows]
+        # Rules stats
+        async with db.execute(
+            "SELECT COUNT(*) as cnt FROM product_rules"
+        ) as cur:
+            row = await cur.fetchone()
+            rules_total = row["cnt"] if row else 0
+        async with db.execute(
+            "SELECT COUNT(*) as cnt FROM product_rules WHERE enabled IS NULL OR enabled = 1"
+        ) as cur:
+            row = await cur.fetchone()
+            rules_enabled = row["cnt"] if row else 0
+    return {
+        "total_transactions": total_transactions,
+        "total_by_currency": total_by_currency,
+        "rules_total": rules_total,
+        "rules_enabled": rules_enabled,
+    }
+
+
 async def get_payment_analytics(
     start_ts: Optional[int] = None,
     end_ts: Optional[int] = None,

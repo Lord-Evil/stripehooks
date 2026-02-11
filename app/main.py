@@ -15,7 +15,7 @@ from pathlib import Path
 from .config import BASE_URL, SESSION_SECRET
 
 BASE_DIR = Path(__file__).resolve().parent
-from .database import init_db, get_setting, set_setting, get_product_rules, add_product_rule, delete_product_rule, set_rule_enabled, get_all_product_rules, get_payment_analytics
+from .database import init_db, get_setting, set_setting, get_product_rules, add_product_rule, delete_product_rule, set_rule_enabled, get_all_product_rules, get_payment_analytics, get_dashboard_stats
 from .notifications import verify_telegram_bot, send_email
 from .webhook import handle_stripe_webhook
 import stripe
@@ -138,6 +138,7 @@ async def admin_dashboard(request: Request):
     nav = await _get_nav_context()
     smtp_configured = await get_setting("smtp_host") is not None
     telegram_configured = await get_setting("telegram_bot_token") is not None
+    stats = await get_dashboard_stats()
 
     return templates.TemplateResponse(
         "admin.html",
@@ -147,6 +148,7 @@ async def admin_dashboard(request: Request):
             "smtp_configured": smtp_configured,
             "telegram_configured": telegram_configured,
             "base_url": BASE_URL,
+            **stats,
         },
     )
 
