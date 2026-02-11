@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Products - StripeHooks{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">Product Rules</h1>
+
+<p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+    Configure actions for each product. Add rules to send emails or Telegram messages.
+</p>
+
+<div class="card">
+    <h2>Add Rule</h2>
+    <form method="post" action="/admin/products/rule" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+            <label for="product_id">Product ID</label>
+            <input type="text" id="product_id" name="product_id" list="products-list" placeholder="prod_xxx or custom ID" required>
+            <datalist id="products-list">
+                {% for p in products %}
+                <option value="{{ p.id }}">{{ p.name }}</option>
+                {% endfor %}
+            </datalist>
+        </div>
+        <div class="form-group" style="flex: 0 0 140px; margin-bottom: 0;">
+            <label for="action_type">Action</label>
+            <select id="action_type" name="action_type">
+                <option value="email">Send Email</option>
+                <option value="telegram">Send Telegram</option>
+            </select>
+        </div>
+        <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+            <label for="action_value">Email or Telegram Chat ID</label>
+            <input type="text" id="action_value" name="action_value" placeholder="email@example.com or 123456789" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 0; flex: 0 0 auto; display: flex; align-items: flex-end;">
+            <button type="submit" class="btn" style="padding: 0.75rem 1.2rem;">Add Rule</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Stripe Products</h2>
+    {% if products %}
+    <table>
+        <thead>
+            <tr><th>ID</th><th>Name</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td class="mono">{{ p.id }}</td>
+                <td>{{ p.name }}</td>
+                <td>{{ p.description or '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--text-muted);">No products from Stripe. Configure the API key and fetch products, or add rules manually with your product ID.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Configured Rules</h2>
+    {% if rules %}
+    <table>
+        <thead>
+            <tr><th>Product</th><th>Action</th><th>Target</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+            {% for product_id, product_rules in rules.items() %}
+            {% for r in product_rules %}
+            <tr>
+                <td>{% if product_names.get(product_id) %}{{ product_names[product_id] }} <span class="mono" style="color: var(--text-muted); font-size: 0.9rem;">({{ product_id }})</span>{% else %}<span class="mono">{{ product_id }}</span>{% endif %}</td>
+                <td>{{ r.type }}</td>
+                <td class="mono">{{ r.value }}</td>
+                <td>
+                    {% if r.enabled %}
+                    <span class="badge badge-ok">Enabled</span>
+                    <form method="post" action="/admin/products/rule/{{ r.id }}/toggle" style="display: inline; margin-left: 0.5rem;">
+                        <input type="hidden" name="enabled" value="0">
+                        <button type="submit" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Disable</button>
+                    </form>
+                    {% else %}
+                    <span class="badge badge-missing">Disabled</span>
+                    <form method="post" action="/admin/products/rule/{{ r.id }}/toggle" style="display: inline; margin-left: 0.5rem;">
+                        <input type="hidden" name="enabled" value="1">
+                        <button type="submit" class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">Enable</button>
+                    </form>
+                    {% endif %}
+                </td>
+                <td>
+                    <form method="post" action="/admin/products/rule/{{ r.id }}/delete" style="display: inline;">
+                        <button type="submit" class="btn btn-secondary btn-danger" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--text-muted);">No rules configured yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}StripeHooks{% endblock %}</title>
+    <link rel="stylesheet" href="/static/fonts.css">
+    <style>
+        :root {
+            --bg: #0f0f12;
+            --surface: #18181c;
+            --surface-2: #222228;
+            --border: #2e2e36;
+            --text: #e4e4e7;
+            --text-muted: #a1a1aa;
+            --accent: #22c55e;
+            --accent-hover: #16a34a;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        .container { max-width: 960px; margin: 0 auto; padding: 2rem; }
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+        }
+        nav a {
+            color: var(--text-muted);
+            text-decoration: none;
+            margin-right: 1.5rem;
+            font-weight: 500;
+        }
+        nav a:hover { color: var(--accent); }
+        nav a.active { color: var(--accent); }
+        nav { display: flex; flex-wrap: wrap; align-items: center; }
+        .nav-settings { position: relative; margin-right: 1.5rem; }
+        .nav-settings summary {
+            color: var(--text-muted);
+            font-weight: 500;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .nav-settings summary::-webkit-details-marker { display: none; }
+        .nav-settings summary:hover { color: var(--accent); }
+        .nav-settings[open] summary { color: var(--accent); }
+        .nav-settings .nav-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.25rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 0;
+            min-width: 140px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .nav-settings .nav-dropdown a {
+            display: block;
+            padding: 0.5rem 1rem;
+            margin: 0;
+        }
+        .btn {
+            display: inline-block;
+            padding: 0.6rem 1.2rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.95rem;
+        }
+        .btn:hover { background: var(--accent-hover); }
+        .btn-secondary {
+            background: var(--surface-2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover { background: var(--border); }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: #dc2626; }
+        input[type="text"], input[type="password"], input[type="email"], input[type="number"], select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: var(--text-muted); }
+        .form-group { margin-bottom: 1.25rem; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .card h2 { margin-bottom: 1rem; font-size: 1.25rem; }
+        .alert { padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
+        .alert-success { background: rgba(34, 197, 94, 0.15); border: 1px solid var(--accent); }
+        .alert-error { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--danger); }
+        .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; }
+        .badge-ok { background: rgba(34, 197, 94, 0.2); color: var(--accent); }
+        .badge-missing { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { color: var(--text-muted); font-weight: 500; font-size: 0.85rem; }
+        .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    {% block nav %}
+    <nav>
+        <a href="/admin" class="{% if request.url.path == '/admin' %}active{% endif %}">Dashboard</a>
+        {% if stripe_ready|default(false) %}
+        <a href="/admin/products" class="{% if request.url.path == '/admin/products' %}active{% endif %}">Products</a>
+        <a href="/admin/history" class="{% if request.url.path == '/admin/history' %}active{% endif %}">History</a>
+        {% endif %}
+        <details class="nav-settings">
+            <summary title="Settings">&#9776; Settings</summary>
+            <div class="nav-dropdown" onclick="this.closest('details').removeAttribute('open')">
+                <a href="/admin/account" class="{% if request.url.path == '/admin/account' %}active{% endif %}">Admin</a>
+                <a href="/admin/stripe" class="{% if request.url.path == '/admin/stripe' %}active{% endif %}">Stripe</a>
+                <a href="/admin/smtp" class="{% if request.url.path == '/admin/smtp' %}active{% endif %}">SMTP</a>
+                <a href="/admin/telegram" class="{% if request.url.path == '/admin/telegram' %}active{% endif %}">Telegram</a>
+            </div>
+        </details>
+        <a href="/admin/logout" style="margin-left: auto;">Logout</a>
+    </nav>
+    {% endblock %}
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
