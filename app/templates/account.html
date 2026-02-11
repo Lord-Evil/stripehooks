@@ -4,11 +4,25 @@
 <h1 style="margin-bottom: 1.5rem;">Admin Account</h1>
 
 {% if request.query_params.get('success') %}
-<div class="alert alert-success">Password changed successfully.</div>
+<div class="alert alert-success">Settings saved.</div>
 {% endif %}
 {% if request.query_params.get('error') %}
 <div class="alert alert-error">{{ request.query_params.get('error') }}</div>
 {% endif %}
+
+<div class="card">
+    <h2>Base URL</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">
+        Public URL for webhooks (e.g. <code class="mono">https://yourdomain.com</code>). Overrides <code class="mono">STRIPEHOOKS_BASE_URL</code>. Leave empty to use env default.
+    </p>
+    <form method="post" action="/admin/account/baseurl">
+        <div class="form-group">
+            <label for="base_url">Base URL</label>
+            <input type="url" id="base_url" name="base_url" value="{{ base_url }}" placeholder="https://yourdomain.com">
+        </div>
+        <button type="submit" class="btn">Save Base URL</button>
+    </form>
+</div>
 
 <div class="card">
     <h2>Change Password</h2>

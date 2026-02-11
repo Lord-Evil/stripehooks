@@ -5,10 +5,12 @@ A FastAPI web app that handles Stripe webhooks (`payment_intent.succeeded`) and 
 ## Features
 
 - **Stripe webhook** for `payment_intent.succeeded` events
-- **Product-based rules**: configure actions per product ID (from `data.object.payment_details.order_reference` or `data.object.metadata.product_id`)
+- **Product-based rules**: configure actions per product ID (from `data.object.payment_details.order_reference` or `data.object.metadata.product_id`); enable/disable without deleting
 - **Actions**: send email, send Telegram message (multiple per product)
 - **Admin UI**: single-user web interface for configuration
+- **Dashboard**: total transactions, revenue by currency, rules enabled/configured
 - **Sales History**: analytics with date range presets (today, yesterday, this week, etc.) and custom datepicker
+- **Settings**: Base URL override in Admin (webhook URL); change password
 - **SQLite** storage for settings and rules
 
 ## Setup
@@ -24,7 +26,7 @@ Environment variables can be set directly or via a `.env` file in the project ro
 | Variable | Description |
 |----------|-------------|
 | `STRIPEHOOKS_ADMIN_PASSWORD` | Initial admin password on first launch (default: `admin`). Stored in DB; change via Settings → Admin. |
-| `STRIPEHOOKS_BASE_URL` | Public URL for webhook (e.g. `https://yourdomain.com`) |
+| `STRIPEHOOKS_BASE_URL` | Public URL for webhook (e.g. `https://yourdomain.com`). Can also be set in Settings → Admin. |
 | `STRIPEHOOKS_SESSION_SECRET` | Session secret (optional, auto-generated if not set) |
 | `STRIPEHOOKS_DB_PATH` | SQLite database path (default: `./stripehooks.db`). Use `/app/data/stripehooks.db` in Docker. |
 | `STRIPEHOOKS_HOST` | Server host (default: `0.0.0.0`) |
@@ -60,11 +62,14 @@ docker run -d -p 8000:8000 -v stripehooks_data:/app/data \
 
 ## Admin UI (Steps)
 
+The **Settings** menu (☰) in the top nav provides: **Admin** (password, Base URL), **Stripe** (API key, webhook), **SMTP** (mail server), **Telegram** (bot token).
+
 1. **Stripe**: Enter your Stripe secret key (sk_). Click "Setup Webhook" to create a webhook for `payment_intent.succeeded`. Ensure `STRIPEHOOKS_BASE_URL` is your public URL.
 2. **SMTP**: Configure mail server (host, port, user, password, from email).
 3. **Telegram**: Enter your bot token from @BotFather.
 4. **Products**: Add rules: product ID + action (email or telegram) + target (email address or Telegram chat ID).
 5. **History**: View sales analytics by product; filter by date range (presets or custom picker).
+6. **Admin**: Change password; set Base URL (overrides `STRIPEHOOKS_BASE_URL`).
 
 ## Product ID Extraction
 
