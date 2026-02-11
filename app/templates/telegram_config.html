@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Telegram - StripeHooks{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">Telegram Configuration</h1>
+
+{% if request.query_params.get('success') %}
+<div class="alert alert-success">Telegram bot token verified and saved.</div>
+{% endif %}
+{% if request.query_params.get('error') %}
+<div class="alert alert-error">Token verification failed: {{ request.query_params.get('error') }}</div>
+{% endif %}
+{% if bot_error %}
+<div class="alert alert-error">Stored token is invalid or revoked: {{ bot_error }}</div>
+{% endif %}
+{% if bot_info %}
+<div class="card" style="margin-bottom: 1.5rem;">
+    <h2 style="margin-bottom: 0.75rem;">Configured Bot</h2>
+    <p style="color: var(--text-muted);">
+        <span class="badge badge-ok">Connected</span>
+        {{ bot_info.first_name }}{% if bot_info.username %} (@{{ bot_info.username }}){% endif %}
+        {% if bot_info.link %}
+        — <a href="{{ bot_info.link }}" target="_blank" rel="noopener">{{ bot_info.link }}</a>
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>Bot Token</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        Create a bot via <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> and paste the token here.
+        For "Send Telegram" rules, use the chat ID (numeric). You can get it by messaging your bot and visiting
+        <code class="mono">https://api.telegram.org/bot&lt;token&gt;/getUpdates</code>.
+    </p>
+    <form method="post" action="/admin/telegram">
+        <div class="form-group">
+            <label for="bot_token">Bot Token</label>
+            <input type="password" id="bot_token" name="bot_token" placeholder="123456789:ABCdef..." {% if has_token %}placeholder="••••••••"{% endif %}>
+            {% if has_token %}
+            <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">Token is configured. Enter a new one to replace.</p>
+            {% endif %}
+        </div>
+        <button type="submit" class="btn">Save</button>
+    </form>
+</div>
+{% endblock %}

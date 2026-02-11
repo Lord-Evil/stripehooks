@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Admin Account - StripeHooks{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">Admin Account</h1>
+
+{% if request.query_params.get('success') %}
+<div class="alert alert-success">Password changed successfully.</div>
+{% endif %}
+{% if request.query_params.get('error') %}
+<div class="alert alert-error">{{ request.query_params.get('error') }}</div>
+{% endif %}
+
+<div class="card">
+    <h2>Change Password</h2>
+    <form method="post" action="/admin/account/password">
+        <div class="form-group">
+            <label for="current_password">Current Password</label>
+            <input type="password" id="current_password" name="current_password" required>
+        </div>
+        <div class="form-group">
+            <label for="new_password">New Password</label>
+            <input type="password" id="new_password" name="new_password" required minlength="16">
+            <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                Minimum 16 characters. Must include: uppercase, lowercase, digit, special character (!@#$%^&* etc.).
+            </p>
+        </div>
+        <button type="submit" class="btn">Change Password</button>
+    </form>
+</div>
+{% endblock %}

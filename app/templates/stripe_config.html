@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Stripe - StripeHooks{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">Stripe Configuration</h1>
+
+<div class="card" style="margin-bottom: 1.5rem;">
+    <h2 style="margin-bottom: 0.75rem;">Status</h2>
+    <p style="color: var(--text-muted); margin-bottom: 0.5rem;">API Key: <span class="badge {% if stripe_configured %}badge-ok{% else %}badge-missing{% endif %}">{% if stripe_configured %}Set{% else %}Not set{% endif %}</span></p>
+    <p style="color: var(--text-muted);">Webhook: <span class="badge {% if webhook_configured %}badge-ok{% else %}badge-missing{% endif %}">{% if webhook_configured %}Configured{% else %}Not configured{% endif %}</span></p>
+</div>
+
+{% if request.query_params.get('success') %}
+<div class="alert alert-success">{{ request.query_params.get('success') }}</div>
+{% endif %}
+{% if request.query_params.get('error') %}
+<div class="alert alert-error">
+    {{ request.query_params.get('error') }}
+    {% if 'Authentication' in request.query_params.get('error', '') %}
+    <p style="margin-top: 0.75rem;">Try re-entering your API key below — hidden characters from copy-paste can cause this.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+    <h2>API Key {% if stripe_configured %}<span class="badge badge-ok">Set</span>{% endif %}</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1rem;">Your Stripe secret key (starts with sk_). Stored securely in the database.</p>
+    <form method="post" action="/admin/stripe/api-key">
+        <div class="form-group">
+            <label for="api_key">Stripe Secret Key</label>
+            <input type="password" id="api_key" name="api_key" placeholder="sk_test_..." required>
+        </div>
+        <button type="submit" class="btn">Save API Key</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Webhook Endpoint {% if webhook_configured %}<span class="badge badge-ok">Configured</span>{% endif %}</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        Creates or updates a Stripe webhook for <code class="mono">payment_intent.succeeded</code>.
+        Webhook URL: <code class="mono">{{ base_url.rstrip('/') }}/webhook/stripe</code>
+    </p>
+    <form method="post" action="/admin/stripe/webhook">
+        <button type="submit" class="btn">Setup Webhook</button>
+    </form>
+</div>
+{% endblock %}

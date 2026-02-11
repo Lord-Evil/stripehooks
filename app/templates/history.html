@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}History - StripeHooks{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/flatpickr.min.css">
+<link rel="stylesheet" href="/static/flatpickr-dark.css">
+{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">Sales History</h1>
+
+<p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+    Analytics for successfully matched payments (when a webhook matched a product rule).
+</p>
+
+<div class="card">
+    <h2>Date Range</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1rem; font-size: 0.9rem;">Showing: {{ preset_label }}</p>
+    <form id="history-range-form" method="get" action="/admin/history" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="range">Preset</label>
+            <select id="range" name="range">
+                {% for value, label in presets %}
+                <option value="{{ value }}" {% if preset == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="start">From</label>
+            <input type="text" id="start" name="start" value="{{ start_date }}" readonly style="min-width: 10rem;">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label for="end">To</label>
+            <input type="text" id="end" name="end" value="{{ end_date }}" readonly style="min-width: 10rem;">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+            <label style="visibility: hidden;">Apply</label>
+            <button type="submit" class="btn">Apply</button>
+        </div>
+    </form>
+    <script src="/static/flatpickr.min.js"></script>
+    <script>
+    (function() {
+        var form = document.getElementById('history-range-form');
+        var rangeSelect = document.getElementById('range');
+        var startInput = document.getElementById('start');
+        var endInput = document.getElementById('end');
+
+        var fpOpts = {
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd/m/Y',
+            allowInput: false,
+            onChange: function() { rangeSelect.value = 'custom'; }
+        };
+
+        flatpickr(startInput, fpOpts);
+        flatpickr(endInput, fpOpts);
+
+        rangeSelect.addEventListener('change', function() {
+            if (rangeSelect.value !== 'custom') {
+                form.submit();
+            }
+        });
+    })();
+    </script>
+</div>
+
+<div class="card">
+    <h2>Product Analytics</h2>
+    {% if analytics %}
+    <table>
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Sales</th>
+                <th>Total Income</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in analytics %}
+            <tr>
+                <td>
+                    {{ row.product_name }}
+                    <span class="mono" style="color: var(--text-muted); font-size: 0.85rem;">({{ row.product_id }})</span>
+                </td>
+                <td>{{ row.count }}</td>
+                <td>{{ "%.2f"|format(row.total_display) }} {{ row.currency_upper }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot style="border-top: 2px solid var(--border); font-weight: 600;">
+            <tr>
+                <td>Total</td>
+                <td>{{ analytics|sum(attribute='count') }}</td>
+                <td>
+                    {% set total_sum = analytics|sum(attribute='total_amount') %}
+                    {% set main_currency = analytics[0].currency_upper if analytics else 'USD' %}
+                    {{ "%.2f"|format(total_sum / 100) }} {{ main_currency }}
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+    {% else %}
+    <p style="color: var(--text-muted);">No matched payments in this period.</p>
+    {% endif %}
+</div>
+{% endblock %}

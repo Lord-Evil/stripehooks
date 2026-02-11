@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}SMTP - StripeHooks{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">SMTP Configuration</h1>
+
+{% if request.query_params.get('success') %}
+<div class="alert alert-success">SMTP settings saved.</div>
+{% endif %}
+{% if request.query_params.get('test_success') %}
+<div class="alert alert-success">Test email sent successfully.</div>
+{% endif %}
+{% if request.query_params.get('test_error') %}
+<div class="alert alert-error">Test failed: {{ request.query_params.get('test_error') }}</div>
+{% endif %}
+{% if request.query_params.get('error') %}
+<div class="alert alert-error">{{ request.query_params.get('error') }}</div>
+{% endif %}
+
+<div class="card">
+    <h2>Mail Server</h2>
+    <form method="post" action="/admin/smtp">
+        <div class="form-group">
+            <label for="smtp_host">SMTP Host</label>
+            <input type="text" id="smtp_host" name="smtp_host" value="{{ smtp_host }}" placeholder="smtp.gmail.com" required>
+        </div>
+        <div class="form-group">
+            <label for="smtp_security">Encryption</label>
+            <select id="smtp_security" name="smtp_security">
+                <option value="starttls" {% if smtp_security == 'starttls' %}selected{% endif %}>STARTTLS (port 587, e.g. Gmail)</option>
+                <option value="ssl" {% if smtp_security == 'ssl' %}selected{% endif %}>SSL/TLS (port 465, implicit encryption)</option>
+                <option value="none" {% if smtp_security == 'none' %}selected{% endif %}>None (port 25, plain text)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="smtp_port">SMTP Port</label>
+            <input type="number" id="smtp_port" name="smtp_port" value="{{ smtp_port }}" placeholder="587">
+            <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">587 for STARTTLS, 465 for SSL, 25 for no encryption</p>
+        </div>
+        <div class="form-group">
+            <label for="smtp_user">Username (optional)</label>
+            <input type="text" id="smtp_user" name="smtp_user" value="{{ smtp_user }}" placeholder="user@example.com">
+        </div>
+        <div class="form-group">
+            <label for="smtp_password">Password (optional, leave blank to keep existing)</label>
+            <input type="password" id="smtp_password" name="smtp_password" placeholder="••••••••">
+        </div>
+        <div class="form-group">
+            <label for="smtp_from_email">From Email</label>
+            <input type="email" id="smtp_from_email" name="smtp_from_email" value="{{ smtp_from_email }}" placeholder="noreply@example.com">
+        </div>
+        <button type="submit" class="btn">Save</button>
+    </form>
+</div>
+
+<div class="card">
+    <h2>Test Email</h2>
+    <p style="color: var(--text-muted); margin-bottom: 1rem;">Send a test email to verify your SMTP settings.</p>
+    <form method="post" action="/admin/smtp/test">
+        <div class="form-group">
+            <label for="test_email">Email address</label>
+            <input type="email" id="test_email" name="test_email" placeholder="you@example.com" required>
+        </div>
+        <button type="submit" class="btn">Send Test Email</button>
+    </form>
+</div>
+
+<script>
+document.getElementById('smtp_security').addEventListener('change', function() {
+    var ports = { starttls: '587', ssl: '465', none: '25' };
+    document.getElementById('smtp_port').value = ports[this.value] || '587';
+});
+</script>
+{% endblock %}

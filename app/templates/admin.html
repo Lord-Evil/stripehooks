@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - StripeHooks{% endblock %}
+{% block content %}
+<h1 style="margin-bottom: 1.5rem;">Dashboard</h1>
+
+<div class="card">
+    <h2>Configuration Status</h2>
+    <table>
+        <tr>
+            <td>Stripe API Key</td>
+            <td><span class="badge {% if stripe_configured %}badge-ok{% else %}badge-missing{% endif %}">
+                {% if stripe_configured %}Configured{% else %}Not configured{% endif %}
+            </span></td>
+        </tr>
+        <tr>
+            <td>Webhook (payment_intent.succeeded)</td>
+            <td><span class="badge {% if webhook_configured %}badge-ok{% else %}badge-missing{% endif %}">
+                {% if webhook_configured %}Configured{% else %}Not configured{% endif %}
+            </span></td>
+        </tr>
+        <tr>
+            <td>SMTP Mail Server</td>
+            <td><span class="badge {% if smtp_configured %}badge-ok{% else %}badge-missing{% endif %}">
+                {% if smtp_configured %}Configured{% else %}Not configured{% endif %}
+            </span></td>
+        </tr>
+        <tr>
+            <td>Telegram Bot</td>
+            <td><span class="badge {% if telegram_configured %}badge-ok{% else %}badge-missing{% endif %}">
+                {% if telegram_configured %}Configured{% else %}Not configured{% endif %}
+            </span></td>
+        </tr>
+    </table>
+</div>
+
+<div class="card">
+    <h2>Webhook URL</h2>
+    <p style="color: var(--text-muted); margin-bottom: 0.5rem;">Use this URL when registering the webhook with Stripe (or let the app create it for you):</p>
+    <code class="mono" style="display: block; padding: 1rem; background: var(--surface-2); border-radius: 8px; overflow-x: auto;">{{ base_url.rstrip('/') }}/webhook/stripe</code>
+    <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">
+        Ensure this URL is publicly accessible. For local testing, use <a href="https://stripe.com/docs/webhooks/test#cli" target="_blank" rel="noopener">Stripe CLI</a> to forward webhooks.
+    </p>
+</div>
+{% endblock %}
