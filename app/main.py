@@ -7,12 +7,12 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Request, Depends, HTTPException, Form, BackgroundTasks
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from .config import BASE_URL, SESSION_SECRET
+from .config import BASE_URL, LOG_LEVEL, SESSION_SECRET
 
 BASE_DIR = Path(__file__).resolve().parent
 from .database import init_db, get_setting, set_setting, get_product_rules, add_product_rule, delete_product_rule, set_rule_enabled, get_all_product_rules, get_payment_analytics, get_dashboard_stats
@@ -20,7 +20,21 @@ from .notifications import verify_telegram_bot, send_email
 from .webhook import handle_stripe_webhook
 import stripe
 
-logging.basicConfig(level=logging.INFO)
+def _configure_logging() -> None:
+    level = getattr(logging, LOG_LEVEL, logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format="[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    # Reduce noise from third-party libs unless DEBUG
+    if level != logging.DEBUG:
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("httpcore").setLevel(logging.WARNING)
+        logging.getLogger("stripe").setLevel(logging.WARNING)
+
+
+_configure_logging()
 logger = logging.getLogger(__name__)
 
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
@@ -98,11 +112,57 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="StripeHooks", lifespan=lifespan)
 
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Log each request with client IP (X-Forwarded-For), user-agent, method, path, status."""
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        # Skip logging for static assets to reduce noise
+        if request.url.path.startswith("/static/"):
+            return response
+        forwarded = request.headers.get("x-forwarded-for")
+        client_ip = forwarded.split(",")[0].strip() if forwarded else None
+        if not client_ip and request.client:
+            client_ip = request.client.host
+        client_ip = client_ip or "-"
+        user_agent = request.headers.get("user-agent") or "-"
+        referer = request.headers.get("referer") or request.headers.get("referrer") or "-"
+        logger.info(
+            "%s %s %s - %s \"%s\" referer=\"%s\"",
+            client_ip,
+            request.method,
+            request.url.path,
+            response.status_code,
+            user_agent,
+            referer,
+        )
+        return response
+
+
+app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET)
 
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+async def robots_txt():
+    """Disallow all crawlers."""
+    return "User-Agent: *\nDisallow: /\n"
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    """Serve favicon."""
+    path = BASE_DIR / "static" / "favicon.ico"
+    if path.exists():
+        return FileResponse(path, media_type="image/x-icon")
+    from fastapi.responses import Response
+    return Response(status_code=204)
 
 
 @app.get("/", response_class=HTMLResponse)

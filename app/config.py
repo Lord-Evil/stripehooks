@@ -22,3 +22,6 @@ SESSION_SECRET = os.environ.get("STRIPEHOOKS_SESSION_SECRET", secrets.token_hex(
 # Server host and port
 HOST = os.environ.get("STRIPEHOOKS_HOST", "0.0.0.0")
 PORT = int(os.environ.get("STRIPEHOOKS_PORT", "8000"))
+# Log level: DEBUG, INFO, WARNING/WARN, ERROR (default: INFO)
+_log_level = os.environ.get("STRIPEHOOKS_LOG_LEVEL", "INFO").upper()
+LOG_LEVEL = "WARNING" if _log_level == "WARN" else _log_level

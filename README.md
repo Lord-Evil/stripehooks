@@ -31,16 +31,29 @@ Environment variables can be set directly or via a `.env` file in the project ro
 | `STRIPEHOOKS_DB_PATH` | SQLite database path (default: `./stripehooks.db`). Use `/app/data/stripehooks.db` in Docker. |
 | `STRIPEHOOKS_HOST` | Server host (default: `0.0.0.0`) |
 | `STRIPEHOOKS_PORT` | Server port (default: `8000`) |
+| `STRIPEHOOKS_LOG_LEVEL` | Logging level: `DEBUG`, `INFO`, `WARNING`, `ERROR` (default: `INFO`). Use `DEBUG` to trace webhook processing. |
 
 ## Run
 
 ```bash
 python run.py
 # or
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --no-access-log
 ```
 
 Open http://localhost:8000 and log in with the admin password.
+
+### Reset admin password (CLI)
+
+If you forget the admin password:
+
+```bash
+python -m app.cli reset-password
+# or with password: python -m app.cli reset-password -p "YourNewSecurePassword16!"
+# or via env: STRIPEHOOKS_NEW_PASSWORD=... python -m app.cli reset-password
+```
+
+Password must be at least 16 characters with uppercase, lowercase, digit, and special character. With Docker: `docker run --rm -v stripehooks_data:/app/data -it stripehooks python -m app.cli reset-password`
 
 ## Docker
 

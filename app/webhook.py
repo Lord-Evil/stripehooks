@@ -72,6 +72,7 @@ def extract_product_id(event_data: dict) -> Optional[str]:
     ]
     for path in paths:
         val = get_nested(event_data, path)
+        logger.debug("extract_product_id path=%r -> %r", path, val)
         if val:
             return str(val)
     return None
@@ -79,15 +80,21 @@ def extract_product_id(event_data: dict) -> Optional[str]:
 
 async def process_payment_succeeded(event: dict) -> None:
     """Process payment_intent.succeeded event and execute configured actions."""
+    event_id = event.get("id", "?")
+    logger.debug("process_payment_succeeded event_id=%s", event_id)
+
     product_id = extract_product_id(event)
     if not product_id:
         logger.warning("Could not extract product ID from event: %s", json.dumps(event)[:500])
         return
 
+    logger.debug("product_id=%r, fetching rules", product_id)
     rules = await get_rules_for_product(product_id)
     if not rules:
         logger.info("No rules configured for product %s, skipping", product_id)
         return
+
+    logger.debug("product_id=%r matched %d enabled rule(s)", product_id, len(rules))
 
     payment_intent = event.get("data", {}).get("object", {})
     amount = payment_intent.get("amount", 0) / 100  # cents to units
@@ -161,6 +168,7 @@ async def process_payment_succeeded(event: dict) -> None:
     for rule in rules:
         action_type = rule["type"]
         action_value = rule["value"]
+        logger.debug("executing rule: type=%r target=%r", action_type, action_value[:15] + "..." if len(str(action_value)) > 15 else action_value)
 
         if action_type == "telegram":
             ok, err = await send_telegram_message(action_value, message)
@@ -178,22 +186,30 @@ async def handle_stripe_webhook(request: Request, background_tasks: BackgroundTa
     """Handle incoming Stripe webhook, verify signature, and process events."""
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
+    logger.debug("webhook received, payload_len=%d", len(payload))
 
     webhook_secret = await get_setting("webhook_secret")
     if not webhook_secret:
+        logger.error("webhook_secret not configured")
         raise HTTPException(status_code=500, detail="Webhook secret not configured")
 
     try:
         event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
     except ValueError as e:
+        logger.warning("webhook invalid payload: %s", e)
         raise HTTPException(status_code=400, detail=f"Invalid payload: {e}")
     except stripe.SignatureVerificationError as e:
+        logger.warning("webhook signature verification failed: %s", e)
         raise HTTPException(status_code=400, detail=f"Invalid signature: {e}")
 
-    if event["type"] == "payment_intent.succeeded":
+    event_type = event.get("type", "?")
+    event_id = event.get("id", "?")
+    logger.info("webhook event type=%s id=%s", event_type, event_id)
+
+    if event_type == "payment_intent.succeeded":
         background_tasks.add_task(process_payment_succeeded, event)
     else:
-        logger.info("Unhandled event type: %s", event["type"])
+        logger.info("Unhandled event type: %s", event_type)
 
     # Fix: run notification sends directly in process_payment_succeeded
     # instead of adding as separate background tasks

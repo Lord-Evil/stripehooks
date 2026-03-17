@@ -10,4 +10,5 @@ if __name__ == "__main__":
         host=HOST,
         port=PORT,
         reload=True,
+        access_log=False,  # Use RequestLoggingMiddleware for richer logs (X-Forwarded-For, User-Agent)
     )
