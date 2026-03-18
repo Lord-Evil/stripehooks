@@ -78,15 +78,53 @@ def extract_product_id(event_data: dict) -> Optional[str]:
     return None
 
 
+async def _resolve_product_from_checkout_session(session_id: str) -> Optional[str]:
+    """If order_reference is a Checkout Session ID (cs_*), fetch line items and return first product ID."""
+    if not session_id.startswith("cs_"):
+        return None
+    api_key = await get_setting("stripe_api_key")
+    if not api_key:
+        logger.debug("No Stripe API key, cannot resolve Checkout Session")
+        return None
+    try:
+        stripe.api_key = api_key
+        items = stripe.checkout.Session.list_line_items(session_id, limit=10)
+        data = items.get("data") or []
+        for item in data:
+            price = item.get("price") or {}
+            product = price.get("product")
+            if isinstance(product, str) and product.startswith("prod_"):
+                logger.debug("Resolved cs_ session %s -> product %s", session_id, product)
+                return product
+            if isinstance(product, dict) and product.get("id", "").startswith("prod_"):
+                return product["id"]
+        logger.debug("Checkout Session %s has no product IDs in line items", session_id)
+        return None
+    except Exception as e:
+        logger.debug("Could not resolve Checkout Session %s: %s", session_id, e)
+        return None
+
+
 async def process_payment_succeeded(event: dict) -> None:
     """Process payment_intent.succeeded event and execute configured actions."""
     event_id = event.get("id", "?")
     logger.debug("process_payment_succeeded event_id=%s", event_id)
 
-    product_id = extract_product_id(event)
-    if not product_id:
-        logger.warning("Could not extract product ID from event: %s", json.dumps(event)[:500])
+    raw_id = extract_product_id(event)
+    if not raw_id:
+        logger.warning("Could not extract product ID from event: %s", json.dumps(event))
         return
+
+    # If order_reference is a Checkout Session ID, resolve to product ID
+    product_id = raw_id
+    if raw_id.startswith("cs_"):
+        resolved = await _resolve_product_from_checkout_session(raw_id)
+        if resolved:
+            product_id = resolved
+            logger.debug("Resolved Checkout Session %s -> product %s", raw_id, product_id)
+        else:
+            # Use session ID as rule key so user can add a rule for this session
+            product_id = raw_id
 
     logger.debug("product_id=%r, fetching rules", product_id)
     rules = await get_rules_for_product(product_id)
@@ -168,7 +206,7 @@ async def process_payment_succeeded(event: dict) -> None:
     for rule in rules:
         action_type = rule["type"]
         action_value = rule["value"]
-        logger.debug("executing rule: type=%r target=%r", action_type, action_value[:15] + "..." if len(str(action_value)) > 15 else action_value)
+        logger.debug("executing rule: type=%r target=%r", action_type, action_value)
 
         if action_type == "telegram":
             ok, err = await send_telegram_message(action_value, message)

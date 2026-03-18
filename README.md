@@ -92,7 +92,7 @@ The app extracts the product ID from the webhook payload in this order:
 2. `data.object.metadata.product_id`
 3. `data.object.metadata.order_reference`
 
-Ensure your PaymentIntent includes the product ID in one of these locations when creating payments.
+When `order_reference` is a Checkout Session ID (`cs_*`), the app fetches the session's line items and uses the first product ID. Ensure your PaymentIntent includes the product ID in one of these locations when creating payments.
 
 ## Local Testing
 
